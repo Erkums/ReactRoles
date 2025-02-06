@@ -24,7 +24,7 @@ client.once('ready', () => console.log(`Logged in as ${client.user.tag}`));
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    const args = message.content.split(/\s+/);
+    const args = message.content.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
     const command = args.shift().toLowerCase();
 
     if (command === '!setreactstorole') {
@@ -33,10 +33,10 @@ client.on('messageCreate', async (message) => {
         }
 
         const messageId = args[0];
-        const roleName = args[1];
+        const roleName = args[1].replace(/"/g, '');
         const channelName = args[2] || message.channel.name; // Use provided channel name or default to current channel
 
-        // Find the role by name (case-insensitive)
+        // Find the role by name
         const role = message.guild.roles.cache.find(r => r.name.toLowerCase() === roleName.toLowerCase());
         if (!role) {
             return message.reply(`❌ Role "${roleName}" not found.`);
