@@ -56,9 +56,11 @@ client.on('messageCreate', async (message) => {
         MESSAGE_ID = messageId;
         ROLE_ID = role.id;
 
-        const statusMessage = await message.reply("⏳ Assigning roles to reacting users...");
-        await assignRoles();
-        statusMessage.edit("✅ Role assignment complete!");
+        const totalReactions = (await targetChannel.messages.fetch(MESSAGE_ID)).reactions.cache.reduce((sum, reaction) => sum + reaction.count, 0);
+        const statusMessage = await message.reply(`⏳ Attempting role assignment for ${totalReactions} reacting user` + (totalReactions > 1 ? `s` : ``) + `...`);
+        const assignedCount = await assignRoles();
+        statusMessage.edit(`✅ Role assignment complete! (${assignedCount} member` + (assignedCount > 1 ? `s` : ``) + `)`);
+
     }
 });
 
@@ -75,6 +77,7 @@ async function assignRoles() {
 
         console.log(`📨 Fetching reactions from message: "${message.content}"`);
 
+        let assignedCount = 0;
         for (const reaction of message.reactions.cache.values()) {
             const users = await reaction.users.fetch();
 
@@ -82,14 +85,16 @@ async function assignRoles() {
                 if (user.bot) continue;
 
                 const member = await guild.members.fetch(user.id).catch(() => null);
-                if (member) {
+                if (member && !member.roles.cache.has(ROLE_ID)) {
                     await member.roles.add(ROLE_ID).catch(console.error);
+                    assignedCount++;
                     console.log(`✅ Assigned role to ${member.user.tag}`);
                 }
             }
         }
 
-        console.log("🎉 Role assignment complete!");
+        console.log(`🎉 Role assignment complete! Total members assigned: ${assignedCount}`);
+        return assignedCount;
     } catch (error) {
         console.error("❌ Error fetching message or assigning roles:", error);
     }
